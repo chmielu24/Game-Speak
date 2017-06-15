@@ -4,57 +4,87 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashSet;
 
+import SerializableClass.ServerData;
 
+/**
+ *main application class is responsible for action of server
+ */
 public class Server 
 {
+	/**
+	 * Port to use for create socket
+	 */
     private static final int PORT = 9001;
 
-
-    private static ArrayList<Channel> ChannelList = new ArrayList<Channel>();
+    /**
+     * list of channel
+     */
+    public static ArrayList<Channel> ChannelList = new ArrayList<Channel>();
+    
+    /**
+     * listener is responsible for waits for requests to come in over the network
+     * prefer low latency and high bandwidth over short connection time
+     */
 	public static ServerSocket listener = null;
-
 	
+	/**
+	 * serverData is responsible for send information about server in network
+	 */
+	public static ServerData serverData = new ServerData();
+	
+	/**
+	 * initialize server
+	 * Creates a server socket, bound to the specified port
+	 */
 	public Server() throws IOException
-	{
-        	listener = new ServerSocket(PORT);
-	}
+	{		
+		serverData.channels = Channel.AllChannelsData;
+		
+        listener = new ServerSocket(PORT);
+        listener.setPerformancePreferences(0, 2, 2);
+        
+    }
 	
+	/**
+	 * add channel to the ChannelList
+	 * accept the connection to be made to this socket
+	 */
     public void Run() throws IOException
     {
     	try
     	{
-			Channel ch1 = new Channel("Default Channel");
-			ChannelList.add(ch1);
-			
-			Channel ch2 = new Channel("channel 1");
-			ChannelList.add(ch2);
-        	
-        	for (Channel channel : ChannelList) {
-				channel.start();
-			}
+			ChannelList.add(new Channel("Default Channel"));	
+			ChannelList.add(new Channel("channel 1"));
+			ChannelList.add(new Channel("channel 2"));
+			ChannelList.add(new Channel("channel 3"));
+			ChannelList.add(new Channel("channel 4"));
+			ChannelList.add(new Channel("channel 5"));
+
         	
         	while (true) 
         	{
         		Socket newClientSocket = listener.accept();
-        		
         		OnClientConnect(newClientSocket);
             }
 
     	}
     	finally
     	{
-    		Close();
+    		Stop();
     	}
     }
     
+    /**
+     * create client connect - run new thread for client
+     * @param s client socket
+     */
     public void OnClientConnect(Socket s)
     {
     	System.out.println("Client Connect");
 		
 		try {        
-			Client c = new Client();
-			c.setSocket(s);
-	        ChannelList.get(0).JoinChannel(c);
+			Client c = new Client(s);
+	        c.start();
 
 		} catch (IOException e) {
 			
@@ -65,29 +95,49 @@ public class Server
 				e1.printStackTrace();
 			}
 		}
-
+		
     }
     
-    public void Close()
+    /**
+     * stop the work of server:
+     * close server socket, stop work of channel
+     */
+    public void Stop()
     {
-			try 
-			{
-		    	if(listener != null)
+    	if(listener != null && !listener.isClosed())
+    	{
+        	System.out.println("Closing Server Socket...");
+
+			try {
 				listener.close();
-		    	
-		    	for (Channel channel : ChannelList) 
-		    	{	
-			    	for (Client c : channel.Clients) 
-			    	{
-						c.Disconnect();
-					}
-		    	}
-			} 
-			catch (IOException e) 
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (IOException e1) {
+				System.err.println("Server socket closing error");
+				e1.printStackTrace();
 			}
+			
+        	System.out.println("Disconnecting all Clients");
+
+			for (Channel channel : ChannelList) 
+	    	{	
+	    		channel.Stop();
+	    		
+	    	}
+			
+        	System.out.println("All Clients disconnected");	
+        	
+        	System.out.println("Server Socket is close");
+    	}
+    	
+    }
+    
+    /**
+     * stop work of server in method finalize
+     */
+    protected void finalize()
+    {
+    	System.out.println("finalize Stop Server");
+    	Stop();
+    	
     }
 
 	

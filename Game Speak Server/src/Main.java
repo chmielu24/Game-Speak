@@ -1,18 +1,21 @@
 import java.io.IOException;
 
+/**
+ * Create Server
+ */
 public class Main {
 
-
+	/**
+	 * start function
+	 */
     public static void main(String[] args) {
     	
         System.out.println("The chat server is running.");
         
-        Server s;
 		try {
-			s = new Server();
-			s.Run();
+			new Server().Run();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			System.err.println("Server run error");
 			e.printStackTrace();
 		}
         
